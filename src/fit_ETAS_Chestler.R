@@ -6,13 +6,40 @@ families = gsub(".txt", "", families)
 # First method: Use package bayesianETAS
 library(bayesianETAS)
 
-mu = vector(length=length(families))
-K = vector(length=length(families))
-alpha = vector(length=length(families))
-c = vector(length=length(families))
-p = vector(length=length(families))
-beta = vector(length=length(families))
+# Functions to estimate density function
+bandwidth <- function(X){
+    n = length(X)
+    sigma = sqrt(var(X))
+    iqr = IQR(X)
+    hROT = 0.9 * min(sigma, iqr / 1.34) * n ^ (- 1 / 5)
+    if (hROT == 0.0){
+        hROT = 1.0
+    }
+    return(hROT)
+}
+kernel <- function(X){
+    mask = abs(X) <= 1
+    f = 1 - abs(X)
+    return(f * mask)
+}
+phat <- function(x, X, K, h){
+    n = length(X)
+    p = (1 / ( n * h)) * sum(K((x - X) / h))
+    return(p)
+}
+plot_pdf <- function(X, K, h, phat, label, filename){
+    x = seq(min(X), max(X), length.out=200)
+    y = vector(length=200)
+    for (i in 1:200){
+        y[i] = phat(x[i], X, K, h)
+    }
+    png(filename=filename)
+    par(cex.axis=1.5, cex.lab=1.5, cex.main=1.5)
+    plot(x, y, xlab=label, ylab="PDF", pch=19, main="Estimated density function")
+    dev.off()
+}
 
+# Start first method
 for (i in 1:length(families)){
 	
     catalog = families[i]
@@ -30,13 +57,7 @@ for (i in 1:length(families)){
     magnitudes = data$magnitude
 
     # Compute ETAS model
-    model = maxLikelihoodETAS(ts, magnitudes, min(magnitudes), max(ts))
-    mu[i] = model$params[1]
-    K[i] = model$params[2]
-    alpha[i] = model$params[3]
-    c[i] = model$params[4]
-    p[i] = model$params[5]
-    beta[i] = model$params[6]
+    model = maxLikelihoodETAS(ts, magnitudes, 0, max(ts))
 
     # Compute posterior distribution
     posterior = sampleETASposterior(ts, magnitudes, min(magnitudes), max(ts), sims=5000)
@@ -46,38 +67,11 @@ for (i in 1:length(families)){
     X_c = posterior[, 4]
     X_p = posterior[, 5]
 
-    # Estimate density function
-    bandwidth <- function(X){
-        n = length(X)
-        sigma = sqrt(var(X))
-        iqr = IQR(X)
-        hROT = 0.9 * min(sigma, iqr / 1.34) * n ^ (- 1 / 5)
-        if (hROT == 0.0){
-        	hROT = 1.0
-        }
-        return(hROT)
-    }
-    kernel <- function(X){
-        mask = abs(X) <= 1
-        f = 1 - abs(X)
-        return(f * mask)
-    }
-    phat <- function(x, X, K, h){
-        n = length(X)
-        p = (1 / ( n * h)) * sum(K((x - X) / h))
-        return(p)
-    }
-    plot_pdf <- function(X, K, h, phat, label, filename){
-	    x = seq(min(X), max(X), length.out=200)
-	    y = vector(length=200)
-	    for (i in 1:200){
-            y[i] = phat(x[i], X, K, h)
-        }
-        png(filename=filename)
-        par(cex.axis=1.5, cex.lab=1.5, cex.main=1.5)
-        plot(x, y, xlab=label, ylab="PDF", pch=19, main="Estimated density function")
-        dev.off()
-    }
+    # Save model in files
+    saveRDS(model, file = paste(output_dir, "/model_bayesianETAS.rds", sep=""))
+    saveRDS(posterior, file = paste(output_dir, "/posterior.rds", sep=""))
+
+    # Plot posterior distribution
     # mu
     h <- bandwidth(X_mu)
     plot_pdf(X_mu, kernel, h, phat, "mu", paste(output_dir, "/mu.png", sep=""))
@@ -94,39 +88,31 @@ for (i in 1:length(families)){
     h <- bandwidth(X_p)
     plot_pdf(X_p, kernel, h, phat, "p", paste(output_dir, "/p.png", sep=""))
 }
-results = data.frame(families, mu, K, alpha, c, p, beta)
-write.table(results, "model_Chestler_2017_bayesianETAS.txt", sep="\t", row.names=FALSE, col.names=TRUE) 
 
 # Second method: Use package PtProcess
 library(PtProcess)
 
+# Functions for the magnitude/frequency law
 dmagn_mark <- function(x, data, params){
     y <- dexp(x[, "magnitude"], rate=params[6], log=TRUE)
     return(y)
 }
-
 rmagn_mark <- function(ti, data, params){
     y <- rexp(1, rate=params[6])
     return(list(magnitude=y))
 }
-
 expmap <- function(y, p){
     y$params[1:5] <- exp(p)
     return(y)
 }
 
-TT <- c(0, 852)
-
-mu = vector(length=length(families))
-A = vector(length=length(families))
-alpha = vector(length=length(families))
-c = vector(length=length(families))
-p = vector(length=length(families))
-b = vector(length=length(families))
+# Start second method
+TT <- c(0, 832)
 
 for (i in 1:length(families)){
     
     catalog = families[i]
+    output_dir <- paste("models_Chestler_2017/", catalog, sep="")
     
     # Read data
     filename = paste("../data/Chestler_2017/catalogs/", catalog, ".txt", sep="")
@@ -148,13 +134,6 @@ for (i in 1:length(families)){
     initial <- z$par
     z <- nlm(neglogLik, initial, object=x, pmap=expmap, print.level=2, iterlim=500, typsize=initial)
     
-    model <- expmap(x, z$estimate)
-    mu[i] = model$params[1]
-    A[i] = model$params[2]
-    alpha[i] = model$params[3]
-    c[i] = model$params[4]
-    p[i] = model$params[5]
-    b[i] = model$params[6]
+    # Save model in files
+    saveRDS(z, file = paste(output_dir, "/model_PtProcess.rds", sep=""))
 }
-results = data.frame(families, mu, A, alpha, c, p, b)
-write.table(results, "model_Chestler_2017_PtProcess.txt", sep="\t", row.names=FALSE, col.names=TRUE) 
