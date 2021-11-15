@@ -15,7 +15,7 @@ expmap <- function(y, p){
 # Start second method
 TT <- c(0, 821)
 
-for (i in 220:length(families)){
+for (i in 368:length(families)){
     
     catalog = families[i]
     output_dir <- paste("models_Frank_2014/", catalog, sep="")
