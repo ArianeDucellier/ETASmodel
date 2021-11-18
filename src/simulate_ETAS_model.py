@@ -61,6 +61,6 @@ def generate_history_marked(duration, mu, A, c, p, alpha, M0, beta):
         # An event is generated
         if U <= lambda_g / lambda_max:
             times.append(tau + ksi[0])
-            M.append(M0 + np.random.exponential(scale=1.0 / beta, size=1))
+            M.append(M0 + np.random.exponential(scale=1.0 / beta, size=1)[0])
         tau = tau + ksi[0]
     return (np.array(times), np.array(M))
