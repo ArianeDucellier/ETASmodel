@@ -23,7 +23,7 @@ NLFE = len(LFEs)
 
 df = pd.read_csv('models_Chestler_2017.txt', sep=' ')
 
-for i in range(0, 1): #NLFE):
+for i in range(0, NLFE):
     filename = LFEs[i]['name'][0][0].replace(' ', '')
     
     # Get value of beta
@@ -37,7 +37,7 @@ for i in range(0, 1): #NLFE):
     indices = NS * np.random.uniform(0, 1, N)
 
     # Loop on synthetic event catalogs
-    for j in range(0, 1): #N):
+    for j in range(0, N):
         index = int(floor(indices[j]))
         mu = posterior[index, 0]
         K = posterior[index, 1]
