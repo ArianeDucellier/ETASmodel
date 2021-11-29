@@ -32,6 +32,7 @@ for (i in 1:length(families)){
     }
     model <- fracdiff(ts, 1, 1, 0.5, 0.5)
     frac_param[j, i] <- model$d
+    print(c(i, j, model$d))
   }
 }
 write.table(frac_param, "models_Chestler_2017/simulated_d.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
