@@ -82,6 +82,7 @@ for i in range(12, 13): #, NLFE):
 
         # Loop on synthetic event catalogs
         for j in range(0, N):
+            print(filename, i, j)
             (times, magnitudes) = generate_history_marked(duration, mu, A, c, p, alpha, M0, beta)
             catalog = pd.DataFrame(data={'times': times, 'magnitudes': magnitudes})
 

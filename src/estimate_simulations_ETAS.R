@@ -14,13 +14,13 @@ window = 1 # Duration of time widow to transform catalog into time series
 frac_param <- matrix(nrow=N, ncol=length(families))
 
 for (i in 1:length(families)){
-  
+ 
   catalog = families[i]
 
   output_dir <- paste("models_Chestler_2017/", catalog, sep="")
   
   for (j in 1:N){
-    filename <- paste(output_dir, '/catalog_', j, '.txt', sep="")
+    filename <- paste(output_dir, '/PtProcess/catalog_', j, '.txt', sep="")
     data <- read.table(filename, header=TRUE)
     times = data$times
     ts <- rep(0, T)
@@ -35,4 +35,5 @@ for (i in 1:length(families)){
     print(c(i, j, model$d))
   }
 }
-write.table(frac_param, "models_Chestler_2017/simulated_d.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
+
+write.table(frac_param, "models_Chestler_2017/simulated_d_PtProcess.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
